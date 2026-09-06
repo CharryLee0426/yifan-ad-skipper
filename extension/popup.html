@@ -14,6 +14,11 @@
       <span>Ad protection <small id="setting-state">Loading…</small></span>
       <input type="checkbox" id="enabled" role="switch" disabled>
     </label>
+    <label class="toggle-row" for="auto-quality">
+      <span>Best available quality <small>Use the highest accessible web stream</small></span>
+      <input type="checkbox" id="auto-quality" role="switch" disabled>
+    </label>
+    <p id="quality-status" role="status">Checking video quality…</p>
     <p id="status" role="status">Checking this tab…</p>
     <dl>
       <div><dt><img src="icons/skip-video.svg" width="20" height="20" alt="">Video ad entries removed</dt><dd id="video-ads">—</dd></div>
@@ -22,7 +27,7 @@
       <div><dt><img src="icons/filter-comments.svg" width="20" height="20" alt="">Promotional comments filtered</dt><dd id="comments">—</dd></div>
     </dl>
     <button id="reload" disabled>Reload this video page</button>
-    <p class="note">Reload after changing protection. Counts cover this page load. Ads embedded in the video itself may remain.</p>
+    <p class="note">Reload after changing settings. Manual quality choices are kept. VIP and app-only resolutions still require site access. Counts cover this page load.</p>
     <p id="error" role="alert" hidden></p>
   </main>
   <script src="popup.js"></script>

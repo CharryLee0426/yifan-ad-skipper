@@ -10,6 +10,8 @@
 
 A Chrome Manifest V3 extension for **https://www.yifan.tv/**. It removes known video ad entries, prevents the site's ad timers from starting, and hides pause ads and surrounding ad banners. It also filters promotional danmu entries while preserving ordinary comments.
 
+**Development on `dev`:** automatically selects the highest accessible desktop-web quality, with a separate switch and quality status in the popup. This is not included in the v1.0 release download. Load this checkout's `extension` folder or the ZIP produced by `npm run package` to try it.
+
 ## Features
 
 | | Feature | What it does |
@@ -18,6 +20,7 @@ A Chrome Manifest V3 extension for **https://www.yifan.tv/**. It removes known v
 | <img src="extension/icons/hide-overlays.svg" width="32" alt="Hide overlays"> | Cleaner player | Hides identified pause ads and surrounding banners. |
 | <img src="extension/icons/filter-comments.svg" width="32" alt="Filter comments"> | Promotional comment filtering | Removes marked ad comments while keeping ordinary danmu. |
 | <img src="extension/icons/local-control.svg" width="32" alt="Local control"> | Local controls | Includes an on/off switch, connection status, and per-page diagnostic counts. |
+| | Best available quality (dev) | Chooses the highest enabled stream supplied to the current viewer, up to the site's 1080P web limit. Preserves manual selections and player recovery choices. |
 
 The shield and skip-forward mark represents protected video playback. See the [icon family](docs/ICONS.md) for editable assets and the design rationale.
 
@@ -37,6 +40,10 @@ Protection defaults to **on**. The popup shows whether the player filters connec
 
 Reload the page after changing the switch. Turning protection off immediately stops filtering future calls and disables the network rules, but previously removed ad lists require a reload to restore.
 
+**Best available quality** defaults to on and works independently of ad protection. Reload after changing it. The popup reports the site's selected quality tier and highest accessible tier; these labels are not measurements of decoded frame dimensions. Selection runs once per video's quality/access options, so it does not fight a manual downgrade or repeatedly retry a failing higher stream. Live and line-based players retain the site's selection.
+
+This does **not** unlock VIP video or promise HD on every signed-out video. In fresh guest profiles, both inspected movies supplied only the 576P tier; 720P, 1080P, and 4K entries had no stream path. The site's desktop web selector also routes resolutions above 1080P to its app. See the [quality research](RESEARCH.md#signed-out-quality-research-september-6-2026) for measured results.
+
 If the popup says the player filters are not connected, reload. If playback fails or the warning remains, turn protection off and reload; the site may have changed its player implementation. The extension cannot repair an unavailable video or a failing content CDN.
 
 **Coverage:** the current desktop yifan.tv player and its known ad paths. Ads baked into the video, unmarked server-inserted segments, new ad implementations, and unrelated embedded players may remain. There is no reliable promise to remove every future ad. Mobile layouts and other site aliases have not been validated.
@@ -47,12 +54,13 @@ If the popup says the player filters are not connected, reload. If playback fail
 - It filters the site's explicit ad fields (`startData`, `pauseData`, `barrageData`, linked entries in `flvPathList`) and `isAd`/`isAds` items. A second layer suppresses the known ad scheduler and pause-ad registration.
 - An isolated content script applies CSS to verified ad-only elements: `.dabf`, `vg-pause-f`, and `.vg-vvk-p`.
 - Chrome's declarative network rules block three Google advertising domain families only when the request originates from yifan.tv. Content CDNs and video manifests remain available. Some hidden first-party banners can still be downloaded by the site.
+- A quality-selector adapter uses the site's original `selectBitrate` method after Angular initializes its inputs. It considers only enabled, accessible entries with supplied stream paths and makes no additional stream requests itself.
 
 The extension leaves login requirements, purchased-content flags, available quality levels, subtitles, and resume positions intact. It does not change account entitlements, accelerate the movie, or blindly seek every short video.
 
 ## Permissions and privacy
 
-- `storage`: saves the on/off preference locally.
+- `storage`: saves ad-protection and automatic-quality preferences locally.
 - `declarativeNetRequest`: blocks matching ad requests. Although Chrome describes this permission broadly, the packaged rules require a yifan.tv initiator.
 - `https://*.yifan.tv/*`: permits the player hooks and allows the popup to recognize supported tabs.
 
@@ -71,10 +79,14 @@ npm run test:browser
 npm run research:live
 npm run research:live -- --baseline
 npm run research:live -- --spa
+npm run research:quality
+npm run research:quality -- --baseline
 npm run package
 ```
 
 `npm test` exercises playlist filtering, scheduler suppression, ordinary-content preservation, unknown shapes, disabled behavior, lazy modules, inheritance, and manifest constraints. `test:browser` loads the actual unpacked extension in Chromium and verifies main/isolated-world integration under CSP, private Angular components, real DNR matching, the popup switch, and persistence across reloads.
+
+Quality tests cover selection order, unavailable/locked options, lifecycle timing, independent settings, manual choices, recovery downgrades, episode changes, and destroyed/unsupported players. `research:quality` observes guest quality metadata and decoded frame dimensions in both modes; it saves only boolean access/path flags and quality numbers, never stream URLs or account data. Automatic 576P-to-1080P selection has been verified with controlled fixtures, not on a live guest stream: the inspected live movies did not offer guest HD paths.
 
 Live research uses a disposable browser profile and saves observations and screenshots under `artifacts/`. It requires network access, changes the video position, and is observational rather than a deterministic test. Override the public test page with `YIFAN_TEST_URL`. Logs contain network hostnames and request types, excluding signed stream paths, queries, cookies, and response bodies.
 

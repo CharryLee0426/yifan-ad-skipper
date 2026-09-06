@@ -32,6 +32,27 @@ webpackJsonp.push([[1], {
     }
     require('angular').minified({type: PrivateController});
     window.controller = new PrivateController();
+    class PrivateQualitySelector {
+      constructor() { this.isLive = false; this.isLine = false; this.calls = []; }
+      getAutoLevelName() {}
+      checkForSameBitrate() {}
+      ngOnChanges() {}
+      ngOnInit() {}
+      ngOnDestroy() {}
+      selectBitrate(option) { this.bitrateSelected = option; this.calls.push(option.bitrate); }
+    }
+    require('angular').minified({type: PrivateQualitySelector});
+    window.runQuality = () => {
+      const selector = window.qualitySelector = new PrivateQualitySelector();
+      selector.bitrates = [576, 1080, 2160].map(bitrate => ({
+        key: 'quality-' + bitrate, bitrate, isVIP: bitrate === 2160,
+        isBought: false, isEnabled: bitrate !== 2160,
+        path: bitrate === 2160 ? null : {result:'feature.m3u8', isLive:false, link:''}
+      }));
+      selector.bitrateSelected = selector.bitrates[0];
+      selector.ngOnChanges({bitrates:{}});
+      selector.ngOnInit();
+    };
     class Player {
       onPlayNextVideo() {}
       triggerCounter() {}
@@ -79,6 +100,9 @@ try {
   assert.equal(await page.locator("#control").isVisible(), true);
   assert.equal(await page.locator("#ordinary").isVisible(), true);
   console.log("PASS: main-world hooks reach private Angular components under CSP; overlays hide and content survives");
+  await page.evaluate(() => runQuality());
+  await page.waitForFunction(() => qualitySelector.bitrateSelected.bitrate === 1080);
+  assert.deepEqual(await page.evaluate(() => qualitySelector.calls), [1080]);
 
   const matches = await worker.evaluate(async () => {
     const check = initiator => chrome.declarativeNetRequest.testMatchOutcome({
@@ -100,9 +124,26 @@ try {
   await popup.reload();
   await popup.waitForFunction(() => !document.querySelector("#enabled").disabled);
   assert.equal(await popup.locator("#enabled").isChecked(), true);
+  assert.equal(await popup.locator("#auto-quality").isChecked(), true);
+  assert.match(await popup.locator("#quality-status").textContent(), /Selected: 1080P.*Highest available: 1080P/);
   await popup.waitForFunction(() => document.querySelector("#status").textContent.includes("connected"));
   await mkdir("artifacts", { recursive: true });
   await popup.locator("body").screenshot({ path: "artifacts/popup.png", animations: "disabled" });
+  await popup.locator("#auto-quality").uncheck();
+  await popup.waitForFunction(() => !document.querySelector("#auto-quality").disabled);
+  assert.equal(await worker.evaluate(async () => (await chrome.storage.local.get("autoQuality")).autoQuality), false);
+  assert.deepEqual(await worker.evaluate(() => chrome.declarativeNetRequest.getEnabledRulesets()), ["ads"]);
+  await page.reload();
+  await page.waitForFunction(() => window.runQuality && document.querySelector("#yifan-ad-skipper-style")?.textContent.includes("display"));
+  await page.evaluate(() => runQuality());
+  assert.deepEqual(await page.evaluate(() => qualitySelector.calls), []);
+  assert.equal(await page.evaluate(() => qualitySelector.bitrateSelected.bitrate), 576);
+  await popup.locator("#auto-quality").check();
+  await popup.waitForFunction(() => !document.querySelector("#auto-quality").disabled);
+  await page.waitForFunction(() => qualitySelector.bitrateSelected.bitrate === 1080);
+  await page.evaluate(() => { qualitySelector.selectBitrate(qualitySelector.bitrates[0]); qualitySelector.ngOnChanges({bitrateSelected:{}}); });
+  assert.equal(await page.evaluate(() => qualitySelector.bitrateSelected.bitrate), 576);
+  console.log("PASS: quality hooks connect under CSP; popup shows resolution; quality switch persists independently and manual choices survive");
   await popup.locator("#enabled").uncheck();
   await popup.waitForFunction(() => !document.querySelector("#enabled").disabled);
   await page.waitForFunction(() => document.querySelector("#yifan-ad-skipper-style")?.textContent === "");

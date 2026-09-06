@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Yifan Ad Skipper",
   "version": "1.0.0",
-  "description": "Skips known yifan.tv player ads and hides ad overlays. Includes an on/off switch and local diagnostics.",
+  "description": "Skips known yifan.tv ads and selects the highest accessible web quality. Includes local controls and diagnostics.",
   "minimum_chrome_version": "111",
   "icons": {
     "16": "icons/icon-16.png",
