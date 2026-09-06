@@ -1,0 +1,37 @@
+{
+  "manifest_version": 3,
+  "name": "Yifan Ad Skipper",
+  "version": "1.0.0",
+  "description": "Skips known yifan.tv player ads and hides ad overlays. Includes an on/off switch and local diagnostics.",
+  "minimum_chrome_version": "111",
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "permissions": ["storage", "declarativeNetRequest"],
+  "host_permissions": ["https://*.yifan.tv/*"],
+  "background": { "service_worker": "background.js" },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Yifan Ad Skipper",
+    "default_icon": { "16": "icons/icon-16.png", "32": "icons/icon-32.png" }
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://*.yifan.tv/*"],
+      "js": ["page.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": ["https://*.yifan.tv/*"],
+      "js": ["content.js"],
+      "run_at": "document_start"
+    }
+  ],
+  "declarative_net_request": {
+    "rule_resources": [{ "id": "ads", "enabled": true, "path": "rules.json" }]
+  }
+}

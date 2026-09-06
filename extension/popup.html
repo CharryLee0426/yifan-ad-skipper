@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Yifan Ad Skipper</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <main>
+    <div class="brand"><img src="icons/icon-48.png" width="36" height="36" alt=""><p class="eyebrow">YIFAN AD SKIPPER</p></div>
+    <h1>Watch with fewer interruptions.</h1>
+    <label class="toggle-row" for="enabled">
+      <span>Ad protection <small id="setting-state">Loading…</small></span>
+      <input type="checkbox" id="enabled" role="switch" disabled>
+    </label>
+    <p id="status" role="status">Checking this tab…</p>
+    <dl>
+      <div><dt><img src="icons/skip-video.svg" width="20" height="20" alt="">Video ad entries removed</dt><dd id="video-ads">—</dd></div>
+      <div><dt><img src="icons/skip-video.svg" width="20" height="20" alt="">Scheduled ad entries suppressed</dt><dd id="scheduled-ads">—</dd></div>
+      <div><dt><img src="icons/hide-overlays.svg" width="20" height="20" alt="">Pause ad entries removed</dt><dd id="pause-ads">—</dd></div>
+      <div><dt><img src="icons/filter-comments.svg" width="20" height="20" alt="">Promotional comments filtered</dt><dd id="comments">—</dd></div>
+    </dl>
+    <button id="reload" disabled>Reload this video page</button>
+    <p class="note">Reload after changing protection. Counts cover this page load. Ads embedded in the video itself may remain.</p>
+    <p id="error" role="alert" hidden></p>
+  </main>
+  <script src="popup.js"></script>
+</body>
+</html>

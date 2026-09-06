@@ -1,0 +1,20 @@
+{
+  "name": "yifan-ad-skipper",
+  "version": "1.0.0",
+  "private": true,
+  "license": "MIT",
+  "author": "Charlie Li (CharryLee0426)",
+  "repository": { "type": "git", "url": "git+https://github.com/CharryLee0426/yifan-ad-skipper.git" },
+  "type": "module",
+  "description": "A site-specific Manifest V3 ad skipper for yifan.tv.",
+  "scripts": {
+    "icons": "node scripts/build-icons.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "test:browser": "node tests/browser.mjs",
+    "research:live": "node scripts/research-live.mjs",
+    "package": "node scripts/package.mjs"
+  },
+  "devDependencies": {
+    "playwright": "1.63.0"
+  }
+}

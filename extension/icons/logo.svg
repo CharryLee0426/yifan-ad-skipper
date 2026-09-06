@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none">
+  <title>Yifan Ad Skipper — protected video playback</title>
+  <rect width="64" height="64" rx="15" fill="#123E32"/>
+  <path d="M32 7 52 15V29C52 42 44 51 32 57 20 51 12 42 12 29V15L32 7Z" fill="#A4F4C5"/>
+  <path d="M23 21.5C23 20.7 23.9 20.2 24.6 20.7L38.5 30.7C39.2 31.2 39.2 32.2 38.5 32.7L24.6 42.7C23.9 43.2 23 42.7 23 41.9V21.5Z" fill="#123E32"/>
+  <rect x="41" y="21" width="4" height="22" rx="1.5" fill="#123E32"/>
+</svg>

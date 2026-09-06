@@ -1,0 +1,12 @@
+[
+  {
+    "id": 1,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "initiatorDomains": ["yifan.tv"],
+      "requestDomains": ["doubleclick.net", "googlesyndication.com", "googleadservices.com"],
+      "resourceTypes": ["script", "xmlhttprequest", "image", "media", "sub_frame", "ping", "other"]
+    }
+  }
+]
