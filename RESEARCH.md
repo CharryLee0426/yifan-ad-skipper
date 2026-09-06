@@ -37,6 +37,27 @@ Chrome documents [main and isolated content-script worlds](https://developer.chr
 
 Chrome's [declarativeNetRequest documentation](https://developer.chrome.com/docs/extensions/reference/api/declarativeNetRequest) describes static rules, initiator-domain conditions, and enabling/disabling rulesets. The extension packages one narrowly scoped blocking rule and uses its popup to toggle the complete ruleset.
 
+## Signed-out quality research (September 6, 2026)
+
+The same public bundles were fetched again in a fresh Chromium session. In the [video-page bundle](https://www.yifan.tv/app/4.c007dbd76ff47360426c.js), `invokeClarity` maps the response's `clarity` entries into `bitrates` and divides their `bitrate` values by 1,000 to obtain the displayed quality number. Each option includes `isEnabled`, `isVIP`, `isBought`, and `path`. `invokePlayVideo` separately enforces `needLogin`.
+
+In the [player bundle](https://www.yifan.tv/app/2.753b38471977268c9049.js), `vg-quality-selector.selectBitrate` checks guest login for VIP entries, then purchase status for ordinary accounts. A resolution above 1080 opens the app-download dialog. An accepted selection emits `onBitrateChange` through the original player. Changing a menu label alone cannot provide a missing stream path.
+
+`npm run research:quality` and `npm run research:quality -- --baseline` inspected two public videos without signing in:
+
+| Video | Guest options with a supplied stream | Listed options without streams | Selected tier, off / on | Decoded frame size, off / on |
+| --- | --- | --- | --- | --- |
+| [特立独行](https://www.yifan.tv/play/X4r3180qOd2) | 576P, enabled and non-VIP | 720P, 1080P, 2160P; disabled, VIP, not bought | 576P / 576P | 864 × 362 / 864 × 362 |
+| [飞驰人生3](https://www.yifan.tv/play/8kOpVaG31G3) | 576P, enabled and non-VIP | 720P, 1080P, 2160P; disabled, VIP, not bought | 576P / 576P | 864 × 366 / 864 × 366 |
+
+Both protected runs had six adapters connected, zero adapter errors, no uncaught page errors, and playing video at ready state 4 with no media error. These are short observations. They do not establish an HD stream for guests or coverage of every video. The menu's 576P tier is not the actual decoded height of these widescreen encodes.
+
+The development quality adapter waits until the selector's inputs initialize and requests the highest accessible, enabled web option through the original selector method. It requires a supplied non-ad stream path, skips guest VIP and unknown access states, and leaves live/line-based players alone. It never alters login, purchase flags, stream signatures, media URLs, or manifests. It attempts one selection per set of quality/access options and preserves later manual choices or the site's recovery downgrade. Its setting is independent of ad filtering and defaults to on.
+
+Sixteen unit tests and Chromium integration checks passed for this development change. Controlled fixtures demonstrate an automatic 576P-to-1080P selection, setting persistence under CSP, manual-choice preservation, and a new selection for another episode, including inputs arriving separately. The live tests verify connected hooks and continued guest playback at the available tier; they do **not** verify live guest HD switching.
+
+Local evidence: `artifacts/quality-baseline.json`, `artifacts/quality-protected.json`, and corresponding `quality-*-1.png` / `quality-*-2.png` screenshots. The research command records only quality metadata, boolean access/path flags, playback dimensions, and extension counts. It uses a disposable profile and does not persist stream URLs, signatures, cookies, user objects, or response bodies. `YIFAN_TEST_URL` can select another public video.
+
 ## Limits
 
 Known client-side ad paths are covered. Embedded sponsorships, burned-in ads, unmarked server-side ad insertion, different mobile/embedded players, and future site changes are outside the verified coverage. No stream-manifest rewriting or speculative content seeking is used. Login, subscription, and quality restrictions remain those of the original player.

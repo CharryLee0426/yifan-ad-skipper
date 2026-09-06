@@ -8,7 +8,10 @@
   // Wait for the isolated script to read the saved preference. Hooks are installed
   // immediately, but remain pass-through until configuration arrives.
   let enabled = false;
+  let autoQuality = false;
   const stats = { adapters: [], videoAds: 0, scheduledAds: 0, pauseAds: 0, promotionalComments: 0, errors: 0 };
+  const qualityStates = new WeakMap();
+  let currentQualitySelector = null;
   const wrapped = new WeakSet();
   const inspected = new WeakSet();
   const definitionHooks = new WeakMap();
@@ -20,7 +23,7 @@
     reportPending = true;
     queueMicrotask(() => {
       reportPending = false;
-      window.postMessage({ source: "yifan-ad-skipper:page", type: "status", enabled, ...stats }, location.origin);
+      window.postMessage({ source: "yifan-ad-skipper:page", type: "status", enabled, autoQuality, ...stats }, location.origin);
     });
   }
   function count(key, value) {
@@ -66,10 +69,102 @@
     Object.defineProperty(proto, name, { ...descriptor, value: replacement });
   }
 
+  function resolution(option) {
+    // invokeClarity converts the server's bitrate field into the displayed height.
+    return Number.isInteger(option?.bitrate) && option.bitrate > 0 && option.bitrate <= 16384 ? option.bitrate : 0;
+  }
+  function qualityState(selector) {
+    let state = qualityStates.get(selector);
+    if (!state) {
+      state = { signature: "", attempted: false, manual: false, pending: false, selecting: false, destroyed: false };
+      qualityStates.set(selector, state);
+    }
+    return state;
+  }
+  function availableQuality(option, selector) {
+    return resolution(option) <= 1080 && resolution(option) > 0 &&
+      typeof option.key === "string" && option.key.length > 0 && option.isEnabled === true &&
+      (option.isVIP === false || (option.isVIP === true && option.isBought === true && !!selector.user?.id)) &&
+      !option.needLogin && !option.needBuy && !option.path?.isLive && !option.path?.link &&
+      typeof option.path?.result === "string" && option.path.result.length > 0;
+  }
+  function updateQuality(selector, select = true) {
+    const state = qualityState(selector);
+    if (state.destroyed) return;
+    const options = Array.isArray(selector.bitrates) ? selector.bitrates : [];
+    // Keys identify quality variants of a video. Changes to access also allow a
+    // new attempt, while routine Angular updates and manual choices do not.
+    const signature = JSON.stringify(options.map(option => [option?.key, resolution(option), availableQuality(option, selector)]));
+    if (state.signature !== signature) {
+      state.signature = signature;
+      state.attempted = false;
+      state.manual = false;
+    }
+    const supported = selector.isLive === false && selector.isLine === false;
+    const best = supported ? options.filter(option => availableQuality(option, selector))
+      .reduce((highest, option) => resolution(option) > resolution(highest) ? option : highest, null) : null;
+    const selectionReady = selector.bitrateSelected && options.some(option => option?.key === selector.bitrateSelected.key);
+    if (select && autoQuality && best && selectionReady && !state.attempted && !state.manual) {
+      // At most one selection per option set: keep user choices and the site's
+      // lower-quality recovery after a CDN failure, instead of switching back.
+      state.attempted = true;
+      if (resolution(best) > resolution(selector.bitrateSelected)) {
+        state.selecting = true;
+        try { selector.selectBitrate(best); }
+        finally { state.selecting = false; }
+      }
+    }
+    stats.quality = {
+      selected: resolution(selector.bitrateSelected),
+      available: resolution(best),
+      listed: options.reduce((height, option) => Math.max(height, resolution(option)), 0),
+      manual: state.manual,
+      supported
+    };
+    report();
+  }
+  function queueQuality(selector) {
+    const state = qualityState(selector);
+    if (state.pending || state.destroyed) return;
+    currentQualitySelector = selector;
+    state.pending = true;
+    queueMicrotask(() => {
+      state.pending = false;
+      try { updateQuality(selector); }
+      catch { stats.errors += 1; report(); }
+    });
+  }
+  function hookQuality(proto, name) {
+    const descriptor = Object.getOwnPropertyDescriptor(proto, name);
+    if (typeof descriptor?.value !== "function" || wrapped.has(descriptor.value)) return;
+    const original = descriptor.value;
+    const replacement = function (...args) {
+      const state = qualityState(this);
+      if (name === "ngOnDestroy") {
+        state.destroyed = true;
+        if (currentQualitySelector === this) { currentQualitySelector = null; delete stats.quality; report(); }
+      }
+      if (name === "selectBitrate" && !state.selecting) {
+        // Record the current input set before honoring a UI or recovery choice.
+        updateQuality(this, false);
+        state.manual = true;
+      }
+      const result = Reflect.apply(original, this, args);
+      if (name !== "ngOnDestroy") queueQuality(this);
+      return result;
+    };
+    wrapped.add(replacement);
+    Object.defineProperty(proto, name, { ...descriptor, value: replacement });
+  }
+
   function inspectPrototype(proto) {
     if (!proto || proto === Object.prototype || inspected.has(proto)) return;
     inspected.add(proto);
     const has = (...names) => names.every(name => typeof Object.getOwnPropertyDescriptor(proto, name)?.value === "function");
+    if (has("selectBitrate", "getAutoLevelName", "checkForSameBitrate", "ngOnChanges")) {
+      adapter("quality-selector");
+      for (const name of ["ngOnInit", "ngOnChanges", "selectBitrate", "ngOnDestroy"]) hookQuality(proto, name);
+    }
     if (has("invokePlayVideo", "converHtml5ToMedia2", "assingPendding")) {
       adapter("playback-data");
       wrap(proto, "invokePlayVideo", ([data, ...rest]) => [cleanPlayData(data), ...rest]);
@@ -195,7 +290,11 @@
 
   window.addEventListener("message", event => {
     if (event.source !== window || event.origin !== location.origin || event.data?.source !== "yifan-ad-skipper:content") return;
-    if (event.data.type === "configure" && typeof event.data.enabled === "boolean") enabled = event.data.enabled;
+    if (event.data.type === "configure") {
+      if (typeof event.data.enabled === "boolean") enabled = event.data.enabled;
+      if (typeof event.data.autoQuality === "boolean") autoQuality = event.data.autoQuality;
+      if (currentQualitySelector) queueQuality(currentQualitySelector);
+    }
     report();
   });
   report();

@@ -25,6 +25,13 @@ chrome.runtime.onStartup.addListener(restore);
 chrome.runtime.onMessage.addListener((message, sender, respond) => {
   // Page-world messages cannot control extension settings. Only our popup may.
   if (sender.url !== chrome.runtime.getURL("popup.html")) return;
+  if (message?.type === "set-auto-quality" && typeof message.autoQuality === "boolean") {
+    enqueue(async () => {
+      await chrome.storage.local.set({ autoQuality: message.autoQuality });
+      return { ok: true };
+    }).then(respond, error => respond({ ok: false, error: error.message }));
+    return true;
+  }
   if (message?.type !== "set-enabled" || typeof message.enabled !== "boolean") return;
   enqueue(async () => {
     const { enabled: previous = true } = await chrome.storage.local.get("enabled");
