@@ -1,6 +1,6 @@
 {
   "name": "yifan-ad-skipper",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "license": "MIT",
   "author": "Charlie Li (CharryLee0426)",
@@ -13,6 +13,7 @@
     "test:browser": "node tests/browser.mjs",
     "research:live": "node scripts/research-live.mjs",
     "research:quality": "node scripts/research-quality.mjs",
+    "research:upscale": "node scripts/research-upscale.mjs",
     "package": "node scripts/package.mjs"
   },
   "devDependencies": {

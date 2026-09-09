@@ -6,11 +6,11 @@
 
 [English](README.md) · **简体中文**
 
-**v1.0** · Chrome 111+ · Manifest V3 · [MIT 许可证](LICENSE)
+**v1.1** · Chrome 111+ · Manifest V3 · [MIT 许可证](LICENSE)
 
 适用于 **https://www.yifan.tv/** 的 Chrome 扩展。过滤已识别的视频广告，阻止已知的广告计时器启动，并隐藏暂停广告和播放器周围的横幅广告。同时过滤带有广告标记的推广弹幕，保留普通弹幕。
 
-**`dev` 分支开发功能：** 自动选择当前可用的最高网页清晰度，并在弹窗中提供独立开关和清晰度状态。v1.0 发布包不包含此功能；请加载当前源码的 `extension` 文件夹，或使用 `npm run package` 生成的 ZIP。
+**v1.1** 还会自动选择当前可用的最高网页清晰度，并在弹窗中提供独立开关和清晰度状态。此功能不解锁 VIP 视频，也不保证免登录观看高清；它只选择服务器在当前会话下实际提供的最高档位。
 
 ## 功能
 
@@ -20,13 +20,13 @@
 | <img src="extension/icons/hide-overlays.svg" width="32" alt="隐藏广告浮层"> | 简洁的播放界面 | 隐藏已识别的暂停广告和播放器周围的横幅广告。 |
 | <img src="extension/icons/filter-comments.svg" width="32" alt="过滤推广弹幕"> | 过滤推广弹幕 | 过滤带有广告标记的弹幕，保留普通观众评论。 |
 | <img src="extension/icons/local-control.svg" width="32" alt="本地开关"> | 本地控制 | 提供启用开关、播放器连接状态和当前页面的过滤计数。 |
-| | 最高可用清晰度（dev） | 在网站已提供且允许播放的流中选择最高档位，遵循网页端 1080P 上限，保留手动选择和故障降级。 |
+| | 最高可用清晰度 | 在网站已提供且允许播放的流中选择最高档位，遵循网页端 1080P 上限，保留手动选择和故障降级。 |
 
 产品图标将盾牌与“跳过播放”符号结合，表达视频播放保护。可编辑的图标文件和设计说明见[图标设计文档](docs/ICONS.md)（英文）。扩展弹窗目前使用英文界面。
 
 ## 安装到 Chrome
 
-1. [下载 v1.0](https://github.com/CharryLee0426/yifan-ad-skipper/archive/refs/tags/v1.0.zip) 并解压，或克隆本仓库。
+1. [下载 v1.1](https://github.com/CharryLee0426/yifan-ad-skipper/archive/refs/tags/v1.1.zip) 并解压，或克隆本仓库。
 2. 打开 `chrome://extensions`，启用右上角的**开发者模式**。
 3. 点击**加载已解压的扩展程序**，选择解压后的 **`extension`** 文件夹，也就是包含 `manifest.json` 的文件夹。
 4. 刷新已经打开的 yifan.tv 页面，然后开始播放视频。
@@ -81,6 +81,7 @@ npm run research:live -- --baseline
 npm run research:live -- --spa
 npm run research:quality
 npm run research:quality -- --baseline
+npm run research:upscale
 npm run package
 ```
 
@@ -90,11 +91,17 @@ npm run package
 
 在线研究使用临时浏览器配置，并将观测结果和截图写入 `artifacts/`。该流程需要联网，会改变视频播放位置，属于观测实验而非确定性测试。可以通过 `YIFAN_TEST_URL` 指定其他公开视频页面。日志仅保留网络主机名和请求类型，不记录带签名的媒体路径、查询参数、Cookie 或响应正文。
 
+`research:upscale` 在线上访客流上测量一个原型 GPU 超分方案（WebGL2 实现的 AMD FSR 1.0），输出 1080P 与 2K，并验证全屏与画中画；见 [docs/UPSCALING.md](docs/UPSCALING.md)（英文）。这仅是研究，尚未包含在发布的扩展中。
+
 所检查的来源与实际播放观测结果见 [RESEARCH.md](RESEARCH.md)（英文）。`npm run package` 使用系统 `zip` 命令生成 `dist/yifan-ad-skipper.zip`。
 
 ## v1.0 验证结果
 
 九项自动化测试和 Chromium 集成检查均已通过。在两个公开视频上的短时测试确认：原播放器在越过视频中点时切换到约 20 秒广告，而开启扩展后正片继续播放；暂停广告保持隐藏；在不刷新页面的情况下切换到另一视频，过滤功能仍然有效。这些是短时播放实验，并非完整观看整部视频的测试。
+
+## v1.1 验证结果
+
+十六项自动化测试和 Chromium 集成检查均已通过。v1.1 合入最高可用清晰度适配器，已通过模拟播放器验证（包含 576P 到 1080P 的自动选择），并新增覆盖排序、受限选项、生命周期时序、手动选择、故障降档、切换视频以及播放器销毁或不支持类型的单元测试。在两个公开视频上的访客环境实测确认过滤功能已连接，并以可用档位继续播放；线上访客高清切换未验证，因为所测电影未提供访客高清流。访客环境基线见[清晰度研究记录](RESEARCH.md#signed-out-quality-research-september-6-2026)（英文）。
 
 ## 许可证
 

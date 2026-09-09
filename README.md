@@ -6,11 +6,11 @@
 
 **English** · [简体中文](README.zh-CN.md)
 
-**v1.0** · Chrome 111+ · Manifest V3 · [MIT License](LICENSE)
+**v1.1** · Chrome 111+ · Manifest V3 · [MIT License](LICENSE)
 
 A Chrome Manifest V3 extension for **https://www.yifan.tv/**. It removes known video ad entries, prevents the site's ad timers from starting, and hides pause ads and surrounding ad banners. It also filters promotional danmu entries while preserving ordinary comments.
 
-**Development on `dev`:** automatically selects the highest accessible desktop-web quality, with a separate switch and quality status in the popup. This is not included in the v1.0 release download. Load this checkout's `extension` folder or the ZIP produced by `npm run package` to try it.
+**v1.1** also automatically selects the highest accessible desktop-web quality, with a separate switch and quality status in the popup. It does not unlock VIP video or promise HD on signed-out videos; it picks the highest tier the server actually supplies to the current session.
 
 ## Features
 
@@ -20,13 +20,13 @@ A Chrome Manifest V3 extension for **https://www.yifan.tv/**. It removes known v
 | <img src="extension/icons/hide-overlays.svg" width="32" alt="Hide overlays"> | Cleaner player | Hides identified pause ads and surrounding banners. |
 | <img src="extension/icons/filter-comments.svg" width="32" alt="Filter comments"> | Promotional comment filtering | Removes marked ad comments while keeping ordinary danmu. |
 | <img src="extension/icons/local-control.svg" width="32" alt="Local control"> | Local controls | Includes an on/off switch, connection status, and per-page diagnostic counts. |
-| | Best available quality (dev) | Chooses the highest enabled stream supplied to the current viewer, up to the site's 1080P web limit. Preserves manual selections and player recovery choices. |
+| | Best available quality | Chooses the highest enabled stream supplied to the current viewer, up to the site's 1080P web limit. Preserves manual selections and player recovery choices. |
 
 The shield and skip-forward mark represents protected video playback. See the [icon family](docs/ICONS.md) for editable assets and the design rationale.
 
 ## Install in Chrome
 
-1. [Download v1.0](https://github.com/CharryLee0426/yifan-ad-skipper/archive/refs/tags/v1.0.zip) and extract the ZIP, or clone this repository.
+1. [Download v1.1](https://github.com/CharryLee0426/yifan-ad-skipper/archive/refs/tags/v1.1.zip) and extract the ZIP, or clone this repository.
 2. Open `chrome://extensions` and turn on **Developer mode** in the upper-right corner.
 3. Click **Load unpacked** and select the extracted project's **`extension`** folder—the folder containing `manifest.json`.
 4. Reload any open yifan.tv pages, then start a video.
@@ -81,6 +81,7 @@ npm run research:live -- --baseline
 npm run research:live -- --spa
 npm run research:quality
 npm run research:quality -- --baseline
+npm run research:upscale
 npm run package
 ```
 
@@ -90,11 +91,17 @@ Quality tests cover selection order, unavailable/locked options, lifecycle timin
 
 Live research uses a disposable browser profile and saves observations and screenshots under `artifacts/`. It requires network access, changes the video position, and is observational rather than a deterministic test. Override the public test page with `YIFAN_TEST_URL`. Logs contain network hostnames and request types, excluding signed stream paths, queries, cookies, and response bodies.
 
+`research:upscale` measures a prototype GPU upscaler (AMD FSR 1.0 in WebGL2) over the live guest stream at 1080P and 2K, including full screen and picture-in-picture; see [docs/UPSCALING.md](docs/UPSCALING.md). It is research only and is not part of the shipped extension.
+
 See [RESEARCH.md](RESEARCH.md) for the inspected sources and measured live behavior. `npm run package` creates `dist/yifan-ad-skipper.zip` using the system `zip` command.
 
 ## Verification for v1.0
 
 The nine automated tests and Chromium integration checks passed. Live testing on two public videos confirmed that playback continued past a midpoint where the original player switched to a roughly 20-second ad, pause ads remained hidden, and the filters stayed connected when navigating to another video without reloading the page. These were short playback experiments, not full-length viewing tests.
+
+## Verification for v1.1
+
+The sixteen automated tests and Chromium integration checks pass. v1.1 folds in the best-available-quality adapter, verified with controlled fixtures (including an automatic 576P-to-1080P selection) and unit tests covering selection order, locked options, lifecycle timing, manual choices, recovery downgrades, episode changes, and destroyed or unsupported players. Live guest runs on two public videos confirmed connected hooks and continued playback at the available tier; live guest HD switching was not verified, because the inspected movies supplied no guest HD paths. See the [signed-out quality research](RESEARCH.md#signed-out-quality-research-september-6-2026) for the measured baseline.
 
 ## License
 
