@@ -7,7 +7,8 @@ h1 { margin: 0 0 16px; font-size: 22px; line-height: 1.2; letter-spacing: -.7px;
 .toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px; border-radius: 12px; background: #e4eee8; font-weight: 650; }
 small { display: block; font-weight: 400; color: #52675e; }
 .toggle-row + .toggle-row { margin-top: 10px; }
-#quality-status { font-size: 12px; color: #415b51; }
+#quality-status, #upscale-status { font-size: 12px; color: #415b51; }
+select { flex: 0 0 auto; padding: 6px 8px; border: 1px solid #9fb3aa; border-radius: 8px; background: white; color: inherit; font: inherit; font-weight: 600; cursor: pointer; }
 input { appearance: none; width: 44px; height: 26px; background: #8d9c94; border-radius: 20px; position: relative; cursor: pointer; flex: 0 0 auto; }
 input::after { content: ''; position: absolute; width: 20px; height: 20px; top: 3px; left: 3px; border-radius: 50%; background: white; transition: transform .15s; }
 input:checked { background: #116c55; }

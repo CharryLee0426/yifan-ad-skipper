@@ -2,6 +2,8 @@
 const toggle = document.getElementById("enabled");
 const qualityToggle = document.getElementById("auto-quality");
 const qualityStatus = document.getElementById("quality-status");
+const upscaleSelect = document.getElementById("upscale");
+const upscaleStatus = document.getElementById("upscale-status");
 const reload = document.getElementById("reload");
 const status = document.getElementById("status");
 let activeTab;
@@ -17,6 +19,7 @@ async function refreshStatus() {
   if (!activeTab) {
     status.textContent = "Open a yifan.tv video to see player protection.";
     qualityStatus.textContent = "Open a video to check available quality.";
+    upscaleStatus.textContent = "Open a video to upscale it.";
     return;
   }
   try {
@@ -26,6 +29,14 @@ async function refreshStatus() {
       `Selected: ${quality.selected ? quality.selected + "P" : "unknown"}. Highest available: ${quality.available ? quality.available + "P" : "unknown"}.` +
       (quality.manual ? " Keeping your selection or the player's recovery choice." : "") +
       (quality.listed > quality.available ? " Higher options are restricted or unavailable in this web player." : "");
+    const up = data.upscaleStatus;
+    const label = { "1080p": "1080P", "2k": "2K" }[upscaleSelect.value] || "";
+    upscaleStatus.textContent = upscaleSelect.value === "off" ? "Upscaling is off. The player shows the stream as delivered." :
+      !up || up.state === "idle" ? "Waiting for the video player." :
+      up.state === "unsupported" ? "Upscaling is unavailable here: " + (up.error || "WebGL2 is not supported by this browser or GPU.") :
+      up.state === "error" ? "Upscaling stopped: " + (up.error || "unknown error") + ". Reload to retry." :
+      up.state === "waiting" ? `Ready for ${label}; waiting for video frames.` :
+      `Upscaling ${up.source.width}×${up.source.height} to ${up.output.width}×${up.output.height} at ${up.fps} fps` + (up.renderer ? ` on ${up.renderer}` : "") + "." + (up.pip ? " Picture-in-picture shows the upscaled video." : "");
     for (const [id, key] of [["video-ads", "videoAds"], ["scheduled-ads", "scheduledAds"], ["pause-ads", "pauseAds"], ["comments", "promotionalComments"]]) {
       document.getElementById(id).textContent = data[key] ?? "—";
     }
@@ -34,6 +45,7 @@ async function refreshStatus() {
   } catch {
     status.textContent = "Reload this page to connect the extension.";
     qualityStatus.textContent = "Reload to check video quality.";
+    upscaleStatus.textContent = "Reload to enable upscaling.";
   }
 }
 toggle.addEventListener("change", async () => {
@@ -55,13 +67,28 @@ qualityToggle.addEventListener("change", async () => {
   } catch (error) { qualityToggle.checked = !qualityToggle.checked; showError(error); }
   finally { qualityToggle.disabled = false; }
 });
+upscaleSelect.addEventListener("change", async () => {
+  const previous = [...upscaleSelect.options].find(option => option.defaultSelected)?.value;
+  upscaleSelect.disabled = true;
+  try {
+    const response = await chrome.runtime.sendMessage({ type: "set-upscale", upscale: upscaleSelect.value });
+    if (!response?.ok) throw new Error(response?.error || "Could not save upscaling settings.");
+    for (const option of upscaleSelect.options) option.defaultSelected = option.selected;
+    await new Promise(resolve => setTimeout(resolve, 300));
+    await refreshStatus();
+  } catch (error) { if (previous) upscaleSelect.value = previous; showError(error); }
+  finally { upscaleSelect.disabled = false; }
+});
 reload.addEventListener("click", async () => {
   try { await chrome.tabs.reload(activeTab.id); window.close(); } catch (error) { showError(error); }
 });
 (async () => {
-  const [{ enabled = true, autoQuality = true }, [tab]] = await Promise.all([
-    chrome.storage.local.get(["enabled", "autoQuality"]), chrome.tabs.query({ active: true, currentWindow: true })
+  const [{ enabled = true, autoQuality = true, upscale = "1080p" }, [tab]] = await Promise.all([
+    chrome.storage.local.get(["enabled", "autoQuality", "upscale"]), chrome.tabs.query({ active: true, currentWindow: true })
   ]);
+  upscaleSelect.value = ["off", "1080p", "2k"].includes(upscale) ? upscale : "1080p";
+  for (const option of upscaleSelect.options) option.defaultSelected = option.selected;
+  upscaleSelect.disabled = false;
   toggle.checked = enabled !== false;
   toggle.disabled = false;
   qualityToggle.checked = autoQuality !== false;

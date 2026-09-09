@@ -91,7 +91,7 @@ npm run package
 
 在线研究使用临时浏览器配置，并将观测结果和截图写入 `artifacts/`。该流程需要联网，会改变视频播放位置，属于观测实验而非确定性测试。可以通过 `YIFAN_TEST_URL` 指定其他公开视频页面。日志仅保留网络主机名和请求类型，不记录带签名的媒体路径、查询参数、Cookie 或响应正文。
 
-`research:upscale` 在线上访客流上测量一个原型 GPU 超分方案（WebGL2 实现的 AMD FSR 1.0），输出 1080P 与 2K，并验证全屏与画中画；见 [docs/UPSCALING.md](docs/UPSCALING.md)（英文）。这仅是研究，尚未包含在发布的扩展中。
+**v1.2** 新增 GPU 超分：使用 WebGL2 实现的 AMD FidelityFX Super Resolution 1.0，把站点下发的画面在本机显卡上放大到 1080P 或 2K，并在同一播放器内显示，支持站点自带的全屏以及画中画按钮。NVIDIA、AMD、Intel 与 Apple Silicon 显卡均可运行。弹出面板中的 **Upscale picture** 默认 1080P，切换即时生效，无需刷新；面板会显示源尺寸、输出尺寸、帧率和所用 GPU。这是基于已下发画面的重建，并非站点的高清流。`research:upscale` 在线上访客流上测量该功能；见 [docs/UPSCALING.md](docs/UPSCALING.md)（英文）。
 
 所检查的来源与实际播放观测结果见 [RESEARCH.md](RESEARCH.md)（英文）。`npm run package` 使用系统 `zip` 命令生成 `dist/yifan-ad-skipper.zip`。
 

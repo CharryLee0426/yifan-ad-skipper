@@ -32,6 +32,13 @@ chrome.runtime.onMessage.addListener((message, sender, respond) => {
     }).then(respond, error => respond({ ok: false, error: error.message }));
     return true;
   }
+  if (message?.type === "set-upscale" && ["off", "1080p", "2k"].includes(message.upscale)) {
+    enqueue(async () => {
+      await chrome.storage.local.set({ upscale: message.upscale });
+      return { ok: true };
+    }).then(respond, error => respond({ ok: false, error: error.message }));
+    return true;
+  }
   if (message?.type !== "set-enabled" || typeof message.enabled !== "boolean") return;
   enqueue(async () => {
     const { enabled: previous = true } = await chrome.storage.local.get("enabled");

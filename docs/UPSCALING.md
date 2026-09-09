@@ -1,6 +1,6 @@
 # Client-side upscaling research (September 8, 2026)
 
-Goal: give the yifan.tv web player a 1080P or 2K picture even when the server only supplies the guest 576P stream, render the result **inside the existing player window**, and keep **full screen** and **picture-in-picture** working. This document records what was surveyed, what was measured on the live site, and the recommended design for a v1.2 feature. Nothing here is shipped in the extension yet; the prototype lives in `scripts/upscale-prototype.js` and is driven by `npm run research:upscale`.
+Goal: give the yifan.tv web player a 1080P or 2K picture even when the server only supplies the guest 576P stream, render the result **inside the existing player window**, and keep **full screen** and **picture-in-picture** working. This document records what was surveyed, what was measured on the live site, and the design that shipped in v1.2 as `extension/upscale.js`. `npm run research:upscale` measures the shipped module on the live site.
 
 The server never sends more pixels than the selected tier. Upscaling reconstructs detail from the decoded frames on the viewer's GPU. It cannot equal a real 1080P encode and it does not change account entitlements, stream URLs, or the site's quality menu, which keeps saying 576P.
 
@@ -73,6 +73,15 @@ Same-frame comparison at 2K, taken with the video paused (`artifacts/upscale-com
 ![Native versus FSR at 2560 wide](upscale-compare-2k.png)
 
 Full-size screenshots: `artifacts/upscale-paused-{1080p,2k}-{native,fsr}.png`, their `-detail` crops, and `artifacts/upscale-fullscreen.png`. Raw measurements: `artifacts/upscale.json`. The script saves only dimensions, timings, and API outcomes, never stream URLs, cookies, or response bodies.
+
+## Portability across GPU vendors
+
+The shipped shaders run through WebGL2, which Chrome implements with ANGLE on top of Direct3D 11 (Windows, NVIDIA/AMD/Intel), Metal (macOS, Apple Silicon and Intel/AMD Macs), and OpenGL or Vulkan (Linux, ChromeOS). Two details matter for identical output everywhere:
+
+- **No NaN paths.** The reference FSR code relies on hardware reciprocal behaviour where a division by zero yields infinity and a later saturate clamps it. NaN handling differs between vendors and shows up as black pixels in flat or fully saturated regions, so every such division in `upscale.js` is guarded with an epsilon and the final colour is clamped.
+- **No optional extensions.** The module uses only core WebGL2 features (`texelFetch`, `textureSize`, framebuffer objects, `gl_VertexID`); the timer query used during research was dropped. `powerPreference: "high-performance"` asks dual-GPU laptops for the discrete GPU. A lost context tears the overlay down and rebuilds it after 1.5 seconds.
+
+Measured only on Apple Silicon so far; other vendors run the same code path but have not been benchmarked here.
 
 ## Limits and risks
 

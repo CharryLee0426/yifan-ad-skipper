@@ -19,6 +19,15 @@
       <input type="checkbox" id="auto-quality" role="switch" disabled>
     </label>
     <p id="quality-status" role="status">Checking video quality…</p>
+    <label class="toggle-row" for="upscale">
+      <span>Upscale picture <small>Sharpen the stream on your GPU</small></span>
+      <select id="upscale" disabled>
+        <option value="off">Off</option>
+        <option value="1080p">1080P</option>
+        <option value="2k">2K</option>
+      </select>
+    </label>
+    <p id="upscale-status" role="status">Checking upscaling…</p>
     <p id="status" role="status">Checking this tab…</p>
     <dl>
       <div><dt><img src="icons/skip-video.svg" width="20" height="20" alt="">Video ad entries removed</dt><dd id="video-ads">—</dd></div>
@@ -27,7 +36,7 @@
       <div><dt><img src="icons/filter-comments.svg" width="20" height="20" alt="">Promotional comments filtered</dt><dd id="comments">—</dd></div>
     </dl>
     <button id="reload" disabled>Reload this video page</button>
-    <p class="note">Reload after changing settings. Manual quality choices are kept. VIP and app-only resolutions still require site access. Counts cover this page load.</p>
+    <p class="note">Reload after changing ad or quality settings; upscaling applies at once. Manual quality choices are kept. VIP and app-only resolutions still require site access. Counts cover this page load.</p>
     <p id="error" role="alert" hidden></p>
   </main>
   <script src="popup.js"></script>

@@ -63,6 +63,15 @@ webpackJsonp.push([[1], {
   }
 }]);
 window.Player = requireModule('player').Player;
+window.startFixtureVideo = async () => {
+  // A synthetic 640x268 stream stands in for the site's HLS video.
+  const source = document.createElement('canvas'); source.width = 640; source.height = 268;
+  const ctx = source.getContext('2d'); let t = 0;
+  setInterval(() => { ctx.fillStyle = 'hsl(' + (t++ % 360) + ',70%,45%)'; ctx.fillRect(0, 0, 640, 268); ctx.fillStyle = '#fff'; ctx.fillRect(t % 600, 100, 40, 40); }, 33);
+  const video = document.querySelector('#video_player');
+  video.muted = true; video.srcObject = source.captureStream(30);
+  await video.play();
+};
 window.runPlayback = () => {
   const data = {clarity:[{needBuy:true}], needLogin:true, startSecond:120,
     flvPathList:[{link:'https://ad.example', result:'ad.mp4'}, {link:'', result:'feature.m3u8'}],
@@ -76,7 +85,7 @@ try {
   await context.route("https://www.yifan.tv/__extension_test__", route => route.fulfill({
     contentType: "text/html",
     headers: { "content-security-policy": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'" },
-    body: `<!doctype html><html><body><h1>Player fixture</h1><aa-videoplayer><vg-player><video></video><button id="control">Play</button><vg-pause-f>Pause advertisement</vg-pause-f></vg-player></aa-videoplayer><div class="dabf">Banner advertisement</div><div id="ordinary">Normal content</div><script src="/fixture.js"></script></body></html>`
+    body: `<!doctype html><html><body><h1>Player fixture</h1><aa-videoplayer><vg-player id="main-player" style="position:relative;width:640px;height:360px"><video id="video_player" style="width:640px;height:360px"></video><button id="control">Play</button><vg-pause-f>Pause advertisement</vg-pause-f></vg-player></aa-videoplayer><div class="dabf">Banner advertisement</div><div id="ordinary">Normal content</div><script src="/fixture.js"></script></body></html>`
   }));
   await context.route("https://www.yifan.tv/fixture.js", route => route.fulfill({ contentType: "text/javascript", body: fixture }));
   const worker = context.serviceWorkers()[0] || await context.waitForEvent("serviceworker");
@@ -144,6 +153,48 @@ try {
   await page.evaluate(() => { qualitySelector.selectBitrate(qualitySelector.bitrates[0]); qualitySelector.ngOnChanges({bitrateSelected:{}}); });
   assert.equal(await page.evaluate(() => qualitySelector.bitrateSelected.bitrate), 576);
   console.log("PASS: quality hooks connect under CSP; popup shows resolution; quality switch persists independently and manual choices survive");
+
+  await page.evaluate(() => startFixtureVideo());
+  const overlay = () => page.evaluate(() => {
+    const canvas = document.querySelector("#yifan-upscale-canvas");
+    if (!canvas) return null;
+    const video = document.querySelector("#video_player");
+    return { width: canvas.width, height: canvas.height, visible: getComputedStyle(canvas).visibility === "visible", inPlayer: canvas.parentElement.id === "main-player",
+      css: canvas.getBoundingClientRect().width, videoCss: video.getBoundingClientRect().width, pipButton: !!document.querySelector("#main-player .yifan-upscale-pip") };
+  });
+  await page.waitForFunction(() => document.querySelector("#yifan-upscale-canvas")?.width === 1920 && getComputedStyle(document.querySelector("#yifan-upscale-canvas")).visibility === "visible");
+  let canvas = await overlay();
+  assert.deepEqual({ ...canvas, css: Math.round(canvas.css), videoCss: Math.round(canvas.videoCss) }, { width: 1920, height: 804, visible: true, inPlayer: true, css: 640, videoCss: 640, pipButton: true });
+  const pixel = await page.evaluate(() => new Promise(resolve => {
+    // The overlay must contain the rendered frame, not a black or transparent canvas.
+    // Sample inside a frame callback queued after the overlay's own, before the
+    // non-preserved drawing buffer is handed to the compositor.
+    document.querySelector("#video_player").requestVideoFrameCallback(() => {
+      const probe = document.createElement("canvas"); probe.width = probe.height = 1;
+      probe.getContext("2d").drawImage(document.querySelector("#yifan-upscale-canvas"), 0, 0, 1, 1);
+      resolve([...probe.getContext("2d").getImageData(0, 0, 1, 1).data]);
+    });
+  }));
+  assert.ok(pixel[3] === 255 && pixel.slice(0, 3).some(value => value > 16), `Overlay pixel ${pixel}`);
+  await popup.reload();
+  await popup.waitForFunction(() => /Upscaling 640×268 to 1920×804 at \d+ fps on .+/.test(document.querySelector("#upscale-status").textContent), null, { timeout: 15000 }).catch(async error => {
+    console.error("Popup upscale status:", await popup.locator("#upscale-status").textContent(), "page status:", JSON.stringify(await worker.evaluate(async url => {
+      const tab = (await chrome.tabs.query({})).find(tab => tab.url === url);
+      return chrome.tabs.sendMessage(tab.id, { type: "get-page-status" });
+    }, page.url())));
+    throw error;
+  });
+  assert.equal(await popup.locator("#upscale").inputValue(), "1080p");
+  await popup.locator("#upscale").selectOption("2k");
+  await page.waitForFunction(() => document.querySelector("#yifan-upscale-canvas")?.width === 2560);
+  assert.equal((await overlay()).height, 1072);
+  assert.equal(await worker.evaluate(async () => (await chrome.storage.local.get("upscale")).upscale), "2k");
+  await popup.locator("#upscale").selectOption("off");
+  await page.waitForFunction(() => !document.querySelector("#yifan-upscale-canvas") && !document.querySelector(".yifan-upscale-pip"));
+  await popup.waitForFunction(() => document.querySelector("#upscale-status").textContent.includes("Upscaling is off"));
+  await popup.locator("#upscale").selectOption("1080p");
+  await page.waitForFunction(() => document.querySelector("#yifan-upscale-canvas")?.width === 1920);
+  console.log("PASS: GPU upscaling overlays the player at 1080P and 2K, reports to the popup, and switches live without a reload");
   await popup.locator("#enabled").uncheck();
   await popup.waitForFunction(() => !document.querySelector("#enabled").disabled);
   await page.waitForFunction(() => document.querySelector("#yifan-ad-skipper-style")?.textContent === "");

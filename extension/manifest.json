@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Yifan Ad Skipper",
-  "version": "1.1.0",
-  "description": "Skips known yifan.tv ads and selects the highest accessible web quality. Includes local controls and diagnostics.",
+  "version": "1.2.0",
+  "description": "Skips known yifan.tv ads, selects the highest accessible web quality, and upscales the picture to 1080P or 2K on your GPU. Includes local controls and diagnostics.",
   "minimum_chrome_version": "111",
   "icons": {
     "16": "icons/icon-16.png",
@@ -10,28 +10,53 @@
     "48": "icons/icon-48.png",
     "128": "icons/icon-128.png"
   },
-  "permissions": ["storage", "declarativeNetRequest"],
-  "host_permissions": ["https://*.yifan.tv/*"],
-  "background": { "service_worker": "background.js" },
+  "permissions": [
+    "storage",
+    "declarativeNetRequest"
+  ],
+  "host_permissions": [
+    "https://*.yifan.tv/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
   "action": {
     "default_popup": "popup.html",
     "default_title": "Yifan Ad Skipper",
-    "default_icon": { "16": "icons/icon-16.png", "32": "icons/icon-32.png" }
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png"
+    }
   },
   "content_scripts": [
     {
-      "matches": ["https://*.yifan.tv/*"],
-      "js": ["page.js"],
+      "matches": [
+        "https://*.yifan.tv/*"
+      ],
+      "js": [
+        "page.js",
+        "upscale.js"
+      ],
       "run_at": "document_start",
       "world": "MAIN"
     },
     {
-      "matches": ["https://*.yifan.tv/*"],
-      "js": ["content.js"],
+      "matches": [
+        "https://*.yifan.tv/*"
+      ],
+      "js": [
+        "content.js"
+      ],
       "run_at": "document_start"
     }
   ],
   "declarative_net_request": {
-    "rule_resources": [{ "id": "ads", "enabled": true, "path": "rules.json" }]
+    "rule_resources": [
+      {
+        "id": "ads",
+        "enabled": true,
+        "path": "rules.json"
+      }
+    ]
   }
 }
